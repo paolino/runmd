@@ -1,0 +1,57 @@
+name: "CI"
+on:
+  pull_request:
+  push:
+jobs:
+  macos:
+    runs-on:
+      - macos-latest
+    steps:
+    - name: Setup Repo
+      uses: actions/checkout@v4
+    - name: Install Nix
+      uses: cachix/install-nix-action@v27
+      with:
+        nix_path: nixpkgs=channel:nixos-unstable
+    - name: Flake Check
+      run: nix flake check
+  linux:
+    runs-on:
+      - ubuntu-latest
+    steps:
+    - name: Setup Repo
+      uses: actions/checkout@v4
+    - name: Install Nix
+      uses: cachix/install-nix-action@v27
+      with:
+        nix_path: nixpkgs=channel:nixos-unstable
+    - name: Flake Check
+      run: nix flake check
+    - name: Build Bundle
+      run: nix bundle
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        path: ./runmd-arx
+  docker:
+    runs-on:
+      - ubuntu-latest
+    steps:
+    - name: Setup Repo
+      uses: actions/checkout@v4
+    - name: Install Nix
+      uses: cachix/install-nix-action@v27
+      with:
+        nix_path: nixpkgs=channel:nixos-unstable
+    - name: Create Docker Image
+      run: nix bundle --bundler github:NixOS/bundlers#toDockerImage
+    - name: Login to DockerHub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    - name: Push
+      run: |
+        docker load -i ./runmd-0.0.1.tar.gz
+        docker tag runmd-0.0.1:latest paolino/runmd:latest
+        docker push paolino/runmd:latest
