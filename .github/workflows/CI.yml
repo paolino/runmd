@@ -55,3 +55,20 @@ jobs:
         docker load -i ./runmd-0.0.1.tar.gz
         docker tag runmd-0.0.1:latest paolino/runmd:latest
         docker push paolino/runmd:latest
+  report:
+    runs-on: ubuntu-latest
+    needs: [macos, linux, docker]
+    if: always()
+    steps:
+    - name: pushover-actions
+      uses: umahmood/pushover-actions@main
+      env:
+        PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
+        PUSHOVER_USER: ${{ secrets.PUSHOVER_USER }}
+      with:
+        status: ${{ job.status }}
+        title: "CI Job Report"
+        message: |
+          macos: ${{ needs.macos.result }}
+          linux: ${{ needs.linux.result }}
+          docker: ${{ needs.docker.result }}
